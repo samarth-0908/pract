@@ -1,0 +1,137 @@
+
+Design and implement Parallel Breadth First Search and Depth First Search based on existing algorithms using OpenMP. Use a Tree or an undirected graph for BFS and DFS .
+
+
+    #include <iostream>         // For input/output
+    #include <vector>           // For using std::vector
+    #include <queue>            // For BFS queue
+    #include <omp.h>            // For OpenMP parallelization
+    
+    using namespace std;
+    
+    // Define the Tree Node structure
+    struct TreeNode {
+        int val;                      // Node value
+        vector<TreeNode*> children;   // List of child nodes
+    
+        TreeNode(int x) : val(x) {}   // Constructor to initialize node value
+    };
+    
+    // --------------------------
+    // PARALLEL BREADTH FIRST SEARCH (BFS)
+    // --------------------------
+    void parallelBFS(TreeNode* root) {
+        if (!root) return;    // Exit if the tree is empty
+    
+        queue<TreeNode*> q;   // Create a queue for BFS traversal
+        q.push(root);         // Start with the root node
+    
+        cout << "Parallel BFS: ";
+    
+        while (!q.empty()) {
+            int size = q.size();           // Number of nodes at current level
+            vector<TreeNode*> levelNodes; // Store current level nodes
+    
+            // Dequeue all nodes at this level
+            while (size--) {
+                TreeNode* node = q.front();
+                q.pop();
+                cout << node->val << " ";  // Print current node
+                levelNodes.push_back(node);
+            }
+    
+            // Parallel processing of child nodes
+            #pragma omp parallel for
+            for (int i = 0; i < levelNodes.size(); i++) {
+                TreeNode* curr = levelNodes[i];
+    
+                // Add all children to the queue (critical to avoid race condition)
+                for (TreeNode* child : curr->children) {
+                    #pragma omp critical
+                    q.push(child);
+                }
+            }
+        }
+    
+        cout << endl;
+    }
+    
+    // --------------------------
+    // PARALLEL DEPTH FIRST SEARCH (DFS)
+    // --------------------------
+    
+    // Recursive utility function for DFS using OpenMP tasks
+    void parallelDFSUtil(TreeNode* node) {
+        if (!node) return;  // Exit if node is null
+    
+        #pragma omp critical
+        cout << node->val << " ";  // Print current node (inside critical to avoid overlap)
+    
+        // Parallel for loop to create tasks for each child node
+        #pragma omp parallel for
+        for (int i = 0; i < node->children.size(); i++) {
+            TreeNode* child = node->children[i];
+    
+            // Create a task for each recursive DFS call
+            #pragma omp task
+            {
+                parallelDFSUtil(child);
+            }
+        }
+    }
+    
+    // DFS entry function
+    void parallelDFS(TreeNode* root) {
+        cout << "Parallel DFS: ";
+        
+        // OpenMP parallel region with single thread spawning tasks
+        #pragma omp parallel
+        {
+            #pragma omp single
+            {
+                parallelDFSUtil(root);  // Start DFS from root
+            }
+        }
+    
+        cout << endl;
+    }
+    
+    // --------------------------
+    // FUNCTION TO BUILD A SAMPLE TREE
+    // --------------------------
+    // Tree Structure:
+    //         1
+    //       / | \
+    //      2  3  4
+    //     / \     \
+    //    5   6     7
+    
+    TreeNode* buildSampleTree() {
+        TreeNode* root = new TreeNode(1);
+        TreeNode* node2 = new TreeNode(2);
+        TreeNode* node3 = new TreeNode(3);
+        TreeNode* node4 = new TreeNode(4);
+        TreeNode* node5 = new TreeNode(5);
+        TreeNode* node6 = new TreeNode(6);
+        TreeNode* node7 = new TreeNode(7);
+    
+        // Set children
+        root->children = {node2, node3, node4};
+        node2->children = {node5, node6};
+        node4->children = {node7};
+    
+        return root;
+    }
+    
+    // --------------------------
+    // MAIN FUNCTION
+    // --------------------------
+    int main() {
+        TreeNode* root = buildSampleTree();  // Build the tree
+    
+        parallelBFS(root);  // Perform BFS
+        parallelDFS(root);  // Perform DFS
+    
+        return 0;
+    }
+ 

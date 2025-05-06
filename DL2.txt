@@ -1,0 +1,99 @@
+Multiclass classification using Deep Neural Networks: Example: Use the OCR letter recognition datasethttps://archive.ics.uci.edu/ml/datasets/letter+recognition
+
+
+    # Import necessary libraries
+    import pandas as pd
+    import numpy as np
+    from sklearn.preprocessing import LabelEncoder, StandardScaler
+    from sklearn.model_selection import train_test_split
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import Dense
+    from tensorflow.keras.utils import to_categorical
+    import matplotlib.pyplot as plt
+    from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+    import seaborn as sns
+    
+    # Step 1: Load Dataset
+    column_names = [
+        'letter', 'x-box', 'y-box', 'width', 'height', 'onpix', 'x-bar',
+        'y-bar', 'x2bar', 'y2bar', 'xybar', 'x2ybar', 'xy2bar',
+        'x-ege', 'xegvy', 'y-ege', 'yegvx'
+    ]
+    df = pd.read_csv('letter-recognition.data', header=None, names=column_names)
+    
+    # Step 2: Preprocessing
+    # Check for missing values
+    print("\nChecking for missing values:")
+    print(df.isnull().sum())
+    
+    # Basic stats of the data
+    print("\nBasic statistics of the data:")
+    print(df.describe())
+    
+    # Visualize the distribution of the target labels
+    plt.figure(figsize=(10, 6))
+    df['letter'].value_counts().plot(kind='bar', color='skyblue')
+    plt.title("Distribution of Letters in the Dataset")
+    plt.xlabel("Letter")
+    plt.ylabel("Frequency")
+    plt.show()
+    
+    # Separate features and target
+    X = df.drop('letter', axis=1)
+    y = df['letter']
+    
+    # Encode target labels to integers
+    label_encoder = LabelEncoder()
+    y_encoded = label_encoder.fit_transform(y)
+    
+    # Normalize features
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    
+    # Step 3: Split the data into training and test sets
+    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_encoded, test_size=0.2, random_state=42)
+    
+    # Step 4: One-hot encode the target labels
+    y_train_ohe = to_categorical(y_train, num_classes=26)
+    y_test_ohe = to_categorical(y_test, num_classes=26)
+    
+    # Step 5: Build the DNN model
+    model = Sequential([
+        Dense(128, activation='relu', input_shape=(X_train.shape[1],)),
+        Dense(64, activation='relu'),
+        Dense(26, activation='softmax')  # 26 output classes (letters A-Z)
+    ])
+    
+    # Compile the model
+    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    
+    # Step 6: Train the model
+    history = model.fit(X_train, y_train_ohe, epochs=20, batch_size=32, validation_split=0.1, verbose=1)
+    
+    # Step 7: Evaluate the model on test data
+    test_loss, test_accuracy = model.evaluate(X_test, y_test_ohe)
+    print(f"\nTest Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
+    
+    # Step 8: Model Predictions
+    predictions = model.predict(X_test)
+    predicted_classes = np.argmax(predictions, axis=1)
+    
+    # Step 9: Evaluate Predictions
+    # Accuracy score
+    acc = accuracy_score(y_test, predicted_classes)
+    print(f"\nAccuracy Score: {acc:.4f}")
+    
+    # Confusion Matrix
+    cm = confusion_matrix(y_test, predicted_classes)
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=label_encoder.classes_, yticklabels=label_encoder.classes_)
+    plt.title("Confusion Matrix")
+    plt.xlabel("Predicted")
+    plt.ylabel("True")
+    plt.show()
+    
+    # Classification Report
+    print("\nClassification Report:")
+    print(classification_report(y_test, predicted_classes, target_names=label_encoder.classes_))
+    
+

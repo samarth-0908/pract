@@ -1,0 +1,62 @@
+Use MNIST Fashion Dataset and create a classifier to classify fashion clothing into categories
+
+
+    # 📦 Import required libraries
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import tensorflow as tf
+    from tensorflow.keras import layers, models
+    
+    # 📥 Load the Fashion MNIST dataset
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.fashion_mnist.load_data()
+    
+    # 📊 Basic data checks
+    print("Training data shape:", x_train.shape)
+    print("Testing data shape:", x_test.shape)
+    print("Training labels example:", y_train[:5])
+    
+    # 📌 Class label names
+    class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
+                   'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+    
+    # 🖼️ Visualize a few images
+    for i in range(3):
+        plt.imshow(x_train[i], cmap='gray')
+        plt.title(f"Label: {class_names[y_train[i]]}")
+        plt.axis('off')
+        plt.show()
+    
+    # ⚙️ Preprocess the data: normalize pixel values to [0,1]
+    x_train = x_train / 255.0
+    x_test = x_test / 255.0
+    
+    # 🧠 Build the model
+    model = models.Sequential([
+        layers.Flatten(input_shape=(28, 28)),   # Convert 2D image to 1D array
+        layers.Dense(128, activation='relu'),   # Hidden layer with ReLU
+        layers.Dense(10, activation='softmax')  # Output layer with softmax
+    ])
+    
+    # 🛠️ Compile the model
+    model.compile(optimizer='adam',
+                  loss='sparse_categorical_crossentropy',
+                  metrics=['accuracy'])
+    
+    # 🏋️ Train the model
+    model.fit(x_train, y_train, epochs=10, validation_split=0.1)
+    
+    # 📈 Evaluate the model
+    test_loss, test_acc = model.evaluate(x_test, y_test)
+    print(f"\n✅ Test Accuracy: {test_acc:.4f}")
+    
+    # 🔍 Predict and visualize first 3 test samples
+    predictions = model.predict(x_test[:3])
+    for i in range(3):
+        plt.imshow(x_test[i], cmap='gray')
+        predicted_label = np.argmax(predictions[i])
+        actual_label = y_test[i]
+        plt.title(f"Predicted: {class_names[predicted_label]}, Actual: {class_names[actual_label]}")
+        plt.axis('off')
+        plt.show()
+    
+    
